@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Processing Payment | ChessHub{% endblock %}
+{% block content %}
+
+<div class="flex items-center justify-center min-h-[70vh]">
+  <div class="text-center space-y-6">
+    <div class="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+
+    <h2 class="text-xl font-semibold">Processing Payment</h2>
+    <p class="text-neutral-400 text-sm">Please do not refresh</p>
+  </div>
+</div>
+
+<script>
+const bookingData = JSON.parse(sessionStorage.getItem("booking_payload"));
+
+setTimeout(async () => {
+  const res = await fetch("/bookings/payment/success/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": getCookie("csrftoken"),
+    },
+    body: JSON.stringify(bookingData)
+  });
+
+  const data = await res.json();
+
+  if(data.success){
+    sessionStorage.removeItem("booking_payload");
+    window.location.href = "/bookings/payment/success-page/";
+  }
+}, 2500);
+
+function getCookie(name){
+  let v=null;
+  document.cookie.split(";").forEach(c=>{
+    c=c.trim();
+    if(c.startsWith(name+"="))
+      v=decodeURIComponent(c.substring(name.length+1));
+  });
+  return v;
+}
+</script>
+
+
+{% endblock %}

@@ -1,0 +1,327 @@
+{% extends "base.html" %} {% block title %}My Bookings | ChessHub{% endblock %}
+{% block content %}
+
+<div class="max-w-7xl mx-auto space-y-8">
+  <!-- HEADER -->
+  <div>
+    <h1 class="text-2xl font-bold">My Tournament Slots</h1>
+    <p class="text-neutral-400">
+      Click on any slot to view, reschedule or delete
+    </p>
+  </div>
+
+  <!-- TABLE -->
+  <div
+    class="bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden"
+  >
+    <table class="w-full text-sm">
+      <thead class="bg-neutral-800 text-neutral-400">
+        <tr>
+          <th class="px-6 py-4 text-left">Date</th>
+          <th class="px-6 py-4 text-left">Time</th>
+          <th class="px-6 py-4 text-left">Plan</th>
+          <th class="px-6 py-4 text-left">Price</th>
+          <th class="px-6 py-4 text-left">Status</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for booking in bookings %} {% for slot in booking.slots.all %}
+        <tr
+          class="border-t border-neutral-800 hover:bg-neutral-800/60 cursor-pointer transition"
+          onclick="openModal(this)"
+          data-slot-id="{{ slot.id }}"
+          data-date="{{ slot.date }}"
+          data-time="{{ slot.start_time }} – {{ slot.end_time }}"
+          data-plan="{{ booking.get_plan_type_display }}"
+          data-price="{{ slot.price }}"
+          data-status="{{ slot.status }}"
+        >
+          <td class="px-6 py-4">{{ slot.date }}</td>
+          <td class="px-6 py-4">{{ slot.start_time }} – {{ slot.end_time }}</td>
+          <td class="px-6 py-4">{{ booking.get_plan_type_display }}</td>
+          <td class="px-6 py-4">₹{{ slot.price }}</td>
+          <td class="px-6 py-4">
+            {% if slot.status == "BOOKED" %}
+            <span
+              class="px-3 py-1 text-l rounded-full bg-green-600/20 text-green-400"
+            >
+              Booked
+            </span>
+            {% elif slot.status == "SHIFTED" %}
+            <span
+              class="px-3 py-1 text-l rounded-full bg-red-600/20 text-red-400"
+            >
+              Shifted
+            </span>
+            {% elif slot.status == "CANCELLED" %}
+            <span
+              class="px-3 py-1 text-l rounded-full bg-neutral-600/20 text-neutral-400"
+            >
+              Cancelled
+            </span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %} {% empty %}
+        <tr>
+          <td colspan="5" class="px-6 py-6 text-center text-neutral-400">
+            No bookings found
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ================= MODAL ================= -->
+<div
+  id="bookingModal"
+  class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center z-50"
+>
+  <div
+    class="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-lg p-8 relative"
+  >
+    <button
+      onclick="closeModal()"
+      class="absolute top-4 right-4 text-neutral-400 hover:text-white"
+    >
+      ✕
+    </button>
+
+    <h2 class="text-xl font-semibold mb-6">Slot Details</h2>
+
+    <div class="space-y-3 text-sm">
+      <p><strong>Date:</strong> <span id="mDate"></span></p>
+      <p><strong>Time:</strong> <span id="mTime"></span></p>
+      <p><strong>Plan:</strong> <span id="mPlan"></span></p>
+      <p><strong>Price:</strong> ₹<span id="mPrice"></span></p>
+      <p><strong>Status:</strong> <span id="mStatus"></span></p>
+    </div>
+
+    <!-- RESCHEDULE -->
+    <div class="mt-6">
+      <label class="text-sm text-neutral-400">Reschedule Date</label>
+      <input
+        type="date"
+        id="newDate"
+        class="w-full mt-2 bg-neutral-800 border border-neutral-700 rounded-lg p-2"
+      />
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="flex gap-4 mt-8">
+      <button
+        onclick="rescheduleSlot()"
+        class="flex-1 bg-purple-600 hover:bg-purple-700 py-3 rounded-xl font-semibold transition"
+      >
+        Reschedule
+      </button>
+
+      <button
+        onclick="openDeleteModal()"
+        class="flex-1 bg-red-600 hover:bg-red-700 py-3 rounded-xl font-semibold transition"
+      >
+        Delete
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM MODAL -->
+<div
+  id="deleteModal"
+  class="fixed inset-0 hidden items-center justify-center bg-black/70 backdrop-blur-sm z-50"
+>
+  <div
+    class="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 w-full max-w-sm"
+  >
+    <h3 class="text-lg font-semibold mb-3 text-red-400">Delete Slot?</h3>
+
+    <p class="text-sm text-neutral-400 mb-6">
+      This action cannot be undone. The slot will be cancelled permanently.
+    </p>
+
+    <div class="flex gap-3">
+      <button
+        onclick="confirmDeleteSlot()"
+        class="flex-1 bg-red-600 hover:bg-red-700 py-2 rounded-xl font-semibold transition"
+      >
+        Yes, Delete
+      </button>
+
+      <button
+        onclick="closeDeleteModal()"
+        class="flex-1 bg-neutral-800 hover:bg-neutral-700 py-2 rounded-xl transition"
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>
+
+<div
+  id="holidayModal"
+  class="fixed inset-0 hidden bg-black/70 backdrop-blur-sm z-50"
+>
+  <div class="flex items-center justify-center min-h-screen px-4">
+    <div class="bg-neutral-900 rounded-2xl p-8 max-w-md w-full text-center shadow-2xl">
+
+      <h2 class="text-xl font-semibold text-red-400">
+        Holiday Warning
+      </h2>
+
+      <p class="text-neutral-300 mt-4">
+        Selected date is a holiday:
+        <span id="holidayName" class="font-semibold"></span>
+      </p>
+
+      <p class="text-sm text-neutral-400 mt-2">
+        Slot will be shifted automatically.
+      </p>
+
+      <div class="flex gap-4 mt-6">
+        <button
+          onclick="finalReschedule()"
+          class="flex-1 bg-red-600 hover:bg-red-700 py-3 rounded-xl font-semibold transition"
+        >
+          Proceed
+        </button>
+
+        <button
+          onclick="closeHolidayModal()"
+          class="flex-1 bg-neutral-700 hover:bg-neutral-600 py-3 rounded-xl transition"
+        >
+          Change Date
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<script>
+  /* ===== DOM ELEMENTS ===== */
+  const bookingModal = document.getElementById("bookingModal");
+  const deleteModal = document.getElementById("deleteModal");
+
+  const mDate = document.getElementById("mDate");
+  const mTime = document.getElementById("mTime");
+  const mPlan = document.getElementById("mPlan");
+  const mPrice = document.getElementById("mPrice");
+  const mStatus = document.getElementById("mStatus");
+  const newDate = document.getElementById("newDate");
+
+  let currentSlotId = null;
+
+  /* ===== OPEN SLOT MODAL ===== */
+  function openModal(row) {
+    currentSlotId = row.dataset.slotId;
+
+    bookingModal.classList.remove("hidden");
+    bookingModal.classList.add("flex");
+
+    mDate.innerText = row.dataset.date;
+    mTime.innerText = row.dataset.time;
+    mPlan.innerText = row.dataset.plan;
+    mPrice.innerText = row.dataset.price;
+    mStatus.innerText = row.dataset.status;
+
+    newDate.value = "";
+  }
+
+  /* ===== CLOSE SLOT MODAL ===== */
+  function closeModal() {
+    bookingModal.classList.add("hidden");
+    bookingModal.classList.remove("flex");
+    currentSlotId = null;
+  }
+
+  /* ===== RESCHEDULE SLOT ===== */
+  function rescheduleSlot() {
+    if (!newDate.value) return;
+
+    fetch("/bookings/check-holiday/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCookie("csrftoken"),
+      },
+      body: JSON.stringify({ date: newDate.value }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.is_holiday) {
+          openHolidayModal(data.name);
+        } else {
+          finalReschedule();
+        }
+      });
+  }
+
+  /* ===== DELETE FLOW ===== */
+  function openDeleteModal() {
+    bookingModal.classList.add("hidden");
+    deleteModal.classList.remove("hidden");
+    deleteModal.classList.add("flex");
+  }
+
+  function closeDeleteModal() {
+    deleteModal.classList.add("hidden");
+    deleteModal.classList.remove("flex");
+  }
+
+  function confirmDeleteSlot() {
+    fetch(`/bookings/slot/delete/${currentSlotId}/`, {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": getCookie("csrftoken"),
+      },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          location.reload();
+        }
+      });
+  }
+
+  function finalReschedule() {
+    fetch(`/bookings/slot/reschedule/${currentSlotId}/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCookie("csrftoken"),
+      },
+      body: JSON.stringify({ date: newDate.value }),
+    })
+      .then((res) => res.json())
+      .then(() => location.reload());
+  }
+
+  /* ===== CSRF ===== */
+  function getCookie(name) {
+    let value = null;
+    document.cookie.split(";").forEach((c) => {
+      c = c.trim();
+      if (c.startsWith(name + "=")) {
+        value = decodeURIComponent(c.substring(name.length + 1));
+      }
+    });
+    return value;
+  }
+
+  function openHolidayModal(name) {
+    document.getElementById("holidayName").innerText = name;
+    holidayModal.classList.remove("hidden");
+  }
+
+  function closeHolidayModal() {
+    holidayModal.classList.add("hidden");
+  }
+</script>
+<!-- ================= SCRIPT ================= -->
+
+{% endblock %}

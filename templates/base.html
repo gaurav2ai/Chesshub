@@ -1,0 +1,26 @@
+<!-- templates/base.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}ChessHub{% endblock %}</title>
+  {% load static %}
+  <link href="{% static 'css/dist/styles.css' %}" rel="stylesheet">
+</head>
+
+<body class="min-h-screen bg-neutral-950 text-white">
+
+<div class="flex min-h-screen">
+
+  <!-- SIDEBAR -->
+  {% include "partials/sidebar.html" %}
+
+  <!-- MAIN CONTENT -->
+  <main class="flex-1 p-10">
+    {% block content %}{% endblock %}
+  </main>
+
+</div>
+
+</body>
+</html>

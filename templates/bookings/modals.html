@@ -1,0 +1,38 @@
+<!-- DELETE MODAL -->
+<div id="deleteModal"
+ class="fixed inset-0 bg-black/70 hidden items-center justify-center z-50">
+
+ <div class="bg-neutral-900 rounded-2xl p-8 max-w-sm w-full text-center">
+   <h3 class="text-lg font-semibold mb-4">Delete Slot?</h3>
+   <p class="text-neutral-400 mb-6">
+     This action cannot be undone
+   </p>
+
+   <div class="flex gap-4">
+     <button onclick="closeDelete()"
+      class="flex-1 bg-neutral-800 py-2 rounded-xl">Cancel</button>
+
+     <button onclick="confirmDelete()"
+      class="flex-1 bg-red-600 py-2 rounded-xl">Delete</button>
+   </div>
+ </div>
+</div>
+
+<script>
+let deleteId = null;
+
+function openDelete(id){
+  deleteId = id;
+  deleteModal.classList.remove("hidden");
+  deleteModal.classList.add("flex");
+}
+
+function closeDelete(){
+  deleteModal.classList.add("hidden");
+}
+
+function confirmDelete(){
+  fetch(`/bookings/delete/${deleteId}/`, {method:"POST"})
+    .then(()=>location.reload());
+}
+</script>

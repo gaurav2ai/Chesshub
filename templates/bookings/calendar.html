@@ -1,0 +1,414 @@
+{% extends "base.html" %} {% block title %}Book Tournament | ChessHub
+{%endblock%} {% block content %}
+
+<div class="max-w-7xl mx-auto space-y-8">
+  <h1 class="text-2xl font-bold">Book Your Tournament</h1>
+
+  <!-- PLANS -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div id="plan-BASIC" class="plan-card">Basic<br />₹300</div>
+    <div id="plan-MONTHLY" class="plan-card">Monthly Premium<br />₹2400/8 slots</div>
+    <div id="plan-CUSTOM" class="plan-card">Custom<br />₹300 / slot</div>
+  </div>
+
+  <!-- TIME -->
+  <div class="card">
+    <h2 class="font-semibold mb-3">Select Time</h2>
+    <div class="grid grid-cols-2 gap-4">
+      <input type="time" id="startTime" class="input" />
+      <input type="time" id="endTime" class="input" />
+    </div>
+  </div>
+
+  <!-- WEEKDAYS -->
+  <div id="weekdayBox" class="card hidden">
+    <h2 class="font-semibold mb-3">Select Weekdays (max 2)</h2>
+    <div class="grid grid-cols-7 gap-2">
+      <button class="weekday" data-day="0">Sun</button>
+      <button class="weekday" data-day="1">Mon</button>
+      <button class="weekday" data-day="2">Tue</button>
+      <button class="weekday" data-day="3">Wed</button>
+      <button class="weekday" data-day="4">Thu</button>
+      <button class="weekday" data-day="5">Fri</button>
+      <button class="weekday" data-day="6">Sat</button>
+    </div>
+  </div>
+
+  <!-- CALENDAR + SUMMARY -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <!-- CALENDAR -->
+    <div class="lg:col-span-8 card">
+      <div class="flex justify-between items-center mb-4">
+        <button onclick="changeMonth(-1)">‹</button>
+        <h2 id="monthLabel"></h2>
+        <button onclick="changeMonth(1)">›</button>
+      </div>
+
+      <div class="grid grid-cols-7 text-sm text-neutral-400 mb-2">
+        <div>Sun</div>
+        <div>Mon</div>
+        <div>Tue</div>
+        <div>Wed</div>
+        <div>Thu</div>
+        <div>Fri</div>
+        <div>Sat</div>
+      </div>
+
+      <div id="calendarGrid" class="grid grid-cols-7 gap-3"></div>
+    </div>
+
+    <!-- SUMMARY -->
+    <div class="lg:col-span-4 space-y-6">
+      <div class="card">
+        <h3 class="font-semibold mb-3">Selected Slots</h3>
+        <div id="slotList" class="space-y-2 text-sm"></div>
+      </div>
+
+      <div class="card">
+        <p>Slots: <span id="slotCount">0</span></p>
+        <p class="text-2xl font-bold text-green-400 mt-2">
+          ₹ <span id="totalPrice">0</span>
+        </p>
+      </div>
+    </div>
+  </div>
+  <button
+    onclick="confirmBooking()"
+    class="w-full mt-6 bg-green-600 hover:bg-green-700 text-white font-semibold py-4 rounded-xl transition"
+  >
+    Confirm Booking
+  </button>
+</div>
+
+<!-- ================= SCRIPT ================= -->
+<script>
+  let state = {
+    plan: null,
+    year: new Date().getFullYear(),
+    month: new Date().getMonth(),
+    start: null,
+    end: null,
+    weekdays: [],
+    slots: [],
+  };
+
+  const grid = document.getElementById("calendarGrid");
+  const monthLabel = document.getElementById("monthLabel");
+  const slotList = document.getElementById("slotList");
+
+  function localISO(dt) {
+    return (
+      dt.getFullYear() +
+      "-" +
+      String(dt.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(dt.getDate()).padStart(2, "0")
+    );
+  }
+
+  function resetAll() {
+    state.weekdays = [];
+    state.slots = [];
+    document
+      .querySelectorAll(".weekday")
+      .forEach((b) => b.classList.remove("active"));
+    renderSummary();
+  }
+
+  /* PLAN */
+  document.querySelectorAll(".plan-card").forEach((card) => {
+    card.onclick = () => {
+      document
+        .querySelectorAll(".plan-card")
+        .forEach((c) => c.classList.remove("active"));
+      card.classList.add("active");
+      state.plan = card.id.replace("plan-", "");
+      resetAll();
+      document
+        .getElementById("weekdayBox")
+        .classList.toggle("hidden", state.plan !== "MONTHLY");
+      renderCalendar();
+    };
+  });
+
+  /* TIME */
+  startTime.onchange = endTime.onchange = () => {
+    state.start = startTime.value;
+    state.end = endTime.value;
+    if (state.plan === "MONTHLY") generateMonthly();
+  };
+
+  /* WEEKDAYS */
+  document.querySelectorAll(".weekday").forEach((btn) => {
+    btn.onclick = () => {
+      const d = +btn.dataset.day;
+      if (state.weekdays.includes(d)) {
+        state.weekdays = state.weekdays.filter((x) => x !== d);
+        btn.classList.remove("active");
+      } else {
+        if (state.weekdays.length === 2)
+          return alert("Only 2 weekdays allowed");
+        state.weekdays.push(d);
+        btn.classList.add("active");
+      }
+      if (state.plan === "MONTHLY") generateMonthly();
+    };
+  });
+
+  /* CALENDAR */
+  async function renderCalendar() {
+    grid.innerHTML = "";
+
+    const res = await fetch(
+      `/api/calendar/?year=${state.year}&month=${state.month + 1}`
+    );
+    const data = await res.json();
+    const days = data.days;
+
+    monthLabel.innerText = new Date(state.year, state.month).toLocaleString(
+      "default",
+      { month: "long", year: "numeric" }
+    );
+
+    const firstDay = new Date(state.year, state.month, 1).getDay();
+    for (let i = 0; i < firstDay; i++)
+      grid.appendChild(document.createElement("div"));
+
+    days.forEach((day) => {
+      const dt = new Date(day.date);
+      const iso = day.date;
+
+      let cls = "date";
+      if (day.blocking) cls += " blocked";
+      if (state.slots.some((s) => s.date === iso)) cls += " selected";
+
+      const cell = document.createElement("div");
+      cell.className = cls;
+
+      cell.innerHTML = `
+      <div class="font-semibold">${dt.getDate()}</div>
+      <div class="text-xs opacity-70">${dt.toLocaleDateString("en", {
+        weekday: "short",
+      })}</div>
+      ${
+        day.is_holiday
+          ? `<div class="text-m mt-1 text-amber-500  ">${day.holiday_name}</div>`
+          : ""
+      }
+    `;
+
+      if (!day.blocking && state.plan !== "MONTHLY") {
+        cell.onclick = () => toggleDate(iso);
+      }
+
+      grid.appendChild(cell);
+    });
+  }
+
+  /* DATE CLICK */
+  function toggleDate(date) {
+    if (!state.start || !state.end) return alert("Select time first");
+
+    if (state.plan === "BASIC") {
+      state.slots = [{ date, start: state.start, end: state.end }];
+    }
+
+    if (state.plan === "CUSTOM") {
+      if (state.slots.length === 8) return alert("Max 8 slots");
+      if (!state.slots.find((s) => s.date === date))
+        state.slots.push({ date, start: state.start, end: state.end });
+    }
+
+    renderCalendar();
+    renderSummary();
+  }
+
+  /* MONTHLY */
+  function generateMonthly() {
+    if (!state.start || !state.end || state.weekdays.length !== 2) return;
+
+    state.slots = [];
+    const totalDays = new Date(state.year, state.month + 1, 0).getDate();
+
+    for (let d = 1; d <= totalDays; d++) {
+      const dt = new Date(state.year, state.month, d);
+      if (state.weekdays.includes(dt.getDay())) {
+        state.slots.push({
+          date: localISO(dt),
+          start: state.start,
+          end: state.end,
+        });
+      }
+    }
+
+    renderCalendar();
+    renderSummary();
+  }
+
+  /* SUMMARY */
+  function renderSummary() {
+    slotList.innerHTML = "";
+    slotCount.innerText = state.slots.length;
+    totalPrice.innerText =
+      state.plan === "MONTHLY" ? 2400 : state.slots.length * 300;
+
+    state.slots.forEach((s) => {
+      slotList.innerHTML += `
+  <div class="bg-neutral-800 border border-neutral-700 rounded-lg p-3 space-y-1">
+
+    <div class="flex items-center justify-between">
+      <span class="font-medium">
+        ${new Date(s.date).toDateString()}
+      </span>
+
+      ${
+        s.is_holiday
+          ? `<span class="text-xs bg-red-600/20 text-red-400 px-2 py-0.5 rounded-full">
+             Holiday
+           </span>`
+          : ""
+      }
+    </div>
+
+    <div class="text-sm text-neutral-400">
+      ${s.start} – ${s.end}
+    </div>
+
+    ${
+      s.is_holiday
+        ? `<div class="text-xs text-red-400 flex items-center gap-1">
+           <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2"
+             viewBox="0 0 24 24">
+             <circle cx="12" cy="12" r="9"/>
+             <path d="M12 8v4"/>
+             <path d="M12 16h.01"/>
+           </svg>
+           ${s.holiday_name} · Will be rescheduled
+         </div>`
+        : ""
+    }
+
+  </div>
+`;
+    });
+  }
+
+  /* NAV */
+  function changeMonth(step) {
+    state.month += step;
+    if (state.month < 0) {
+      state.month = 11;
+      state.year--;
+    }
+    if (state.month > 11) {
+      state.month = 0;
+      state.year++;
+    }
+    if (state.plan === "MONTHLY") generateMonthly();
+    renderCalendar();
+  }
+
+  renderCalendar();
+
+  async function confirmBooking() {
+    if (state.slots.length === 0) {
+      alert("Please select at least one slot");
+      return;
+    }
+
+    sessionStorage.setItem(
+      "booking_payload",
+      JSON.stringify({
+        plan: state.plan,
+        slots: state.slots,
+      })
+    );
+
+    window.location.href = "/bookings/payment/";
+  }
+</script>
+
+<script>
+function confirmBooking(){
+  if(state.slots.length === 0){
+    alert("Please select at least one slot");
+    return;
+  }
+
+  sessionStorage.setItem(
+    "booking_payload",
+    JSON.stringify({
+      plan: state.plan,
+      slots: state.slots
+    })
+  );
+
+  window.location.href = "/bookings/payment/";
+}
+
+
+  // CSRF helper
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== "") {
+      const cookies = document.cookie.split(";");
+      for (let cookie of cookies) {
+        cookie = cookie.trim();
+        if (cookie.startsWith(name + "=")) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+</script>
+
+<style>
+  .plan-card {
+    background: #111;
+    border: 1px solid #333;
+    padding: 16px;
+    border-radius: 16px;
+    cursor: pointer;
+  }
+  .plan-card.active {
+    background: #16a34a;
+  }
+  .card {
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 16px;
+    padding: 16px;
+  }
+  .input {
+    background: #222;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 8px;
+  }
+  .weekday {
+    background: #222;
+    padding: 8px;
+    border-radius: 8px;
+  }
+  .weekday.active {
+    background: #16a34a;
+  }
+  .date {
+    background: #6d28d9;
+    border-radius: 12px;
+    padding: 12px;
+    text-align: center;
+    cursor: pointer;
+  }
+  .date.selected {
+    background: #16a34a;
+  }
+  .date.blocked {
+    background: #333;
+    cursor: not-allowed;
+  }
+</style>
+
+{% endblock %}

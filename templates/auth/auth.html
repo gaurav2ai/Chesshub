@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ChessHub | Auth</title>
+  {% load static %}
+  <link href="{% static 'css/dist/styles.css' %}" rel="stylesheet">
+</head>
+
+<body class="h-screen overflow-hidden bg-gray-100">
+
+<!-- TOASTS -->
+{% if messages %}
+<div class="fixed top-5 right-5 space-y-3 z-50">
+  {% for message in messages %}
+    <div class="px-4 py-3 rounded-lg shadow text-white
+      {% if message.tags == 'success' %} bg-green-600 {% else %} bg-red-600 {% endif %}">
+      {{ message }}
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="h-screen lg:grid lg:grid-cols-2">
+
+  <!-- LEFT IMAGE (DESKTOP ONLY) -->
+  <div class="relative hidden lg:block">
+    <img
+      src="https://img.freepik.com/free-photo/assortment-chess-pieces-with-dramatic-scenery_23-2150829083.jpg"
+      class="w-full h-full object-cover"
+    >
+    <div class="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-white">
+      <h1 class="text-4xl font-bold tracking-wide">ChessHub</h1>
+      <p class="mt-2 text-lg">Play. Compete. Win.</p>
+    </div>
+  </div>
+
+  <!-- RIGHT / MOBILE -->
+  <div class="relative flex items-center justify-center h-full">
+
+    <!-- MOBILE IMAGE -->
+    <div class="absolute inset-0 lg:hidden">
+      <img
+        src="https://img.freepik.com/free-photo/assortment-chess-pieces-with-dramatic-scenery_23-2150829083.jpg"
+        class="w-full h-full object-cover"
+      >
+      <div class="absolute inset-0 bg-black/50"></div>
+    </div>
+
+    <!-- AUTH CARD -->
+    <div class="relative z-10 w-full max-w-md bg-white/90 backdrop-blur
+                p-8 rounded-xl shadow-xl mx-4 mt-10 lg:mt-0">
+
+      <h2 class="text-2xl font-bold text-center mb-1">ChessHub</h2>
+      <p class="text-center text-gray-600 mb-6">Sign in or create an account</p>
+
+      <!-- TAB TOGGLE -->
+      <div class="flex mb-6 rounded-lg bg-gray-100 p-1">
+        <button id="loginTab"
+          class="w-1/2 py-2 rounded-md text-sm font-semibold bg-white shadow transition">
+          Login
+        </button>
+        <button id="registerTab"
+          class="w-1/2 py-2 rounded-md text-sm font-semibold text-gray-600 transition">
+          Register
+        </button>
+      </div>
+
+      <!-- LOGIN FORM -->
+      <form id="loginForm" method="POST" class="space-y-4">
+        {% csrf_token %}
+        <input type="hidden" name="form_type" value="login">
+
+        <input type="email" name="email" placeholder="Email" required
+          class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-black/20">
+
+        <input type="password" name="password" placeholder="Password" required
+          class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-black/20">
+
+        <button type="submit" id="loginBtn"
+          class="w-full flex items-center justify-center gap-2 bg-black text-white
+                 py-2 rounded-lg font-semibold disabled:opacity-60">
+          <svg id="loginLoader" class="w-5 h-5 animate-spin hidden"
+               fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10"
+                    stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor"
+                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+          </svg>
+          <span id="loginText">Login</span>
+        </button>
+
+        <p class="text-center text-sm text-gray-600">
+          Forgot password?
+          <a href="{% url 'password_reset' %}" class="font-semibold text-black">
+            Reset
+          </a>
+        </p>
+      </form>
+
+      <!-- REGISTER FORM -->
+      <form id="registerForm" method="POST" enctype="multipart/form-data"
+            class="space-y-4 hidden">
+        {% csrf_token %}
+        <input type="hidden" name="form_type" value="register">
+
+        <input type="text" name="name" placeholder="Full name" required
+          class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-black/20">
+
+        <input type="number" name="age" min="5" max="100" placeholder="Age" required
+          class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-black/20">
+
+        <select name="gender" required
+          class="w-full px-4 py-2 rounded-lg border bg-white focus:ring-2 focus:ring-black/20">
+          <option value="">Select Gender</option>
+          <option value="M">Male</option>
+          <option value="F">Female</option>
+          <option value="O">Other</option>
+        </select>
+
+        <input type="email" name="email" placeholder="Email" required
+          class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-black/20">
+
+        <input type="password" name="password" placeholder="Password" required
+          class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-black/20">
+
+        <label class='mb-4 gap-2' for="">Select your profile image</label>
+        <input type="file" name="profile_image"
+          class="w-full text-sm file:mr-4 file:py-2 file:px-4
+                 file:rounded-lg file:border-0
+                 file:bg-black file:text-white">
+
+        <button type="submit" id="registerBtn"
+          class="w-full flex items-center justify-center gap-2 bg-black text-white
+                 py-2 rounded-lg font-semibold disabled:opacity-60">
+          <svg id="registerLoader" class="w-5 h-5 animate-spin hidden"
+               fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10"
+                    stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor"
+                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+          </svg>
+          <span id="registerText">Create Account</span>
+        </button>
+      </form>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  const loginTab = document.getElementById('loginTab');
+  const registerTab = document.getElementById('registerTab');
+  const loginForm = document.getElementById('loginForm');
+  const registerForm = document.getElementById('registerForm');
+
+  function activateLogin() {
+    loginForm.classList.remove('hidden');
+    registerForm.classList.add('hidden');
+
+    loginTab.classList.add('bg-white','shadow');
+    loginTab.classList.remove('text-gray-600');
+
+    registerTab.classList.remove('bg-white','shadow');
+    registerTab.classList.add('text-gray-600');
+  }
+
+  function activateRegister() {
+    registerForm.classList.remove('hidden');
+    loginForm.classList.add('hidden');
+
+    registerTab.classList.add('bg-white','shadow');
+    registerTab.classList.remove('text-gray-600');
+
+    loginTab.classList.remove('bg-white','shadow');
+    loginTab.classList.add('text-gray-600');
+  }
+
+  loginTab.onclick = activateLogin;
+  registerTab.onclick = activateRegister;
+
+  loginForm.addEventListener('submit', () => {
+    loginBtn.disabled = true;
+    loginText.innerText = 'Processing...';
+    loginLoader.classList.remove('hidden');
+  });
+
+  registerForm.addEventListener('submit', () => {
+    registerBtn.disabled = true;
+    registerText.innerText = 'Processing...';
+    registerLoader.classList.remove('hidden');
+  });
+</script>
+
+</body>
+</html>
